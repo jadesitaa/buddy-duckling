@@ -8,6 +8,7 @@ class Settings(BaseSettings):
 
     app_name: str = "Buddy Duckling"
     debug: bool = False
+    database_url: str = "postgresql+asyncpg://buddy:buddy@localhost:5433/buddy_duckling"
 
 
 @lru_cache
