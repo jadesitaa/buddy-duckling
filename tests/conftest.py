@@ -63,3 +63,40 @@ async def client(db: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
     async with AsyncClient(transport=transport, base_url="http://test") as async_client:
         yield async_client
     app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def make_user(client: AsyncClient):
+    """Register a user and return a client that is logged in as them."""
+
+    async def _make_user(email: str = "duckling@example.com") -> AsyncClient:
+        await client.post(
+            "/auth/register",
+            json={
+                "email": email,
+                "password": "quack-quack-123",
+                "display_name": email.split("@")[0],
+                "timezone": "Asia/Bangkok",
+            },
+        )
+        tokens = (
+            await client.post(
+                "/auth/login",
+                json={"email": email, "password": "quack-quack-123"},
+            )
+        ).json()
+        logged_in = AsyncClient(
+            transport=ASGITransport(app=app),
+            base_url="http://test",
+            headers={"Authorization": f"Bearer {tokens['access_token']}"},
+        )
+        return logged_in
+
+    return _make_user
+
+
+@pytest.fixture
+async def auth_client(make_user) -> AsyncGenerator[AsyncClient, None]:
+    """A client logged in as the default test user."""
+    async with await make_user() as logged_in:
+        yield logged_in
