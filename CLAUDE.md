@@ -5,8 +5,8 @@ Habit tracker API with social accountability, built as an internship portfolio p
 ## Concept
 
 Users track personal habits and pair up with an accountability "buddy". The pairing
-is bidirectional: whichever side breaks their streak, the other side gets notified via
-LINE Notify. Buddies can also set a shared goal — each side has their own streak target
+is bidirectional: whichever side breaks their streak, the other side gets an in-app
+notification. Buddies can also set a shared goal — each side has their own streak target
 (possibly on a different habit), and once both sides hit their own target, a shared
 reward (e.g. "get ice cream together") unlocks for both.
 
@@ -17,13 +17,12 @@ reward (e.g. "get ice cream together") unlocks for both.
 - Pydantic v2 for validation/schemas
 - JWT authentication (python-jose or fastapi-users)
 - pytest + freezegun for mocking time in tests
-- LINE Notify API via httpx
 - APScheduler for the daily streak-check job
 
 ## Database schema
 
 1. **users**: id, email (unique), password_hash, display_name, timezone (e.g. "Asia/Bangkok"),
-   line_notify_token (nullable), created_at, updated_at
+   created_at, updated_at
 2. **habits**: id, user_id (FK), name, description, frequency_type (enum: daily,
    weekly_n_times), frequency_target (int), current_streak (int, default 0),
    longest_streak (int, default 0), is_active (bool, default true), created_at, updated_at
@@ -38,6 +37,10 @@ reward (e.g. "get ice cream together") unlocks for both.
 6. **badges**: id, code (unique, e.g. "streak_7"), title, milestone_days (int)
 7. **user_badges**: id, user_id (FK), badge_id (FK), habit_id (FK), earned_at,
    UNIQUE(user_id, badge_id, habit_id)
+8. **notifications**: id, user_id (FK, the recipient), type (enum: streak_broken,
+   partner_request, partner_accepted, waiting_for_partner, goal_achieved, badge_earned),
+   title, body, related_habit_id (nullable), related_partnership_id (nullable),
+   is_read (bool, default false), created_at
 
 ## Core logic rules
 
@@ -48,7 +51,7 @@ reward (e.g. "get ice cream together") unlocks for both.
 - **Accountability partner**: no auto-linking — a partnership only sends notifications
   once `status = accepted`. Notifications are bidirectional: either side breaking their
   streak notifies the other side. A daily APScheduler job checks all habits for broken
-  streaks and fires LINE Notify.
+  streaks and writes the notifications.
 - **Shared goals**: compare each side's own `current_streak` against their own target
   (`target_streak_a` / `target_streak_b`) — the two sides can be on completely different
   habits and reach their target on different days. `achieved_at` is set only once both
@@ -57,6 +60,10 @@ reward (e.g. "get ice cream together") unlocks for both.
 - **Badges**: on every successful log, check whether `current_streak` matches any
   badge's `milestone_days`; if so and the user hasn't already earned that badge for that
   habit, insert a `user_badges` row.
+- **Notifications**: delivered in-app only — no external provider. Every place that
+  notifies (streak broken, partner request, shared goal, badge earned) goes through one
+  `notify()` service so another channel can be added later in a single file. A user only
+  ever reads their own notifications.
 - **Ownership**: every endpoint except `/auth/*` must check the JWT and that the
   requester owns the resource, or is an accepted partner on it.
 
@@ -72,6 +79,8 @@ reward (e.g. "get ice cream together") unlocks for both.
 - `POST/GET /partnerships/{id}/goals`, `DELETE /partnerships/{id}/goals/{id}`
 - `GET /habits/{id}/stats`, `GET /me/dashboard`
 - `GET /me/badges`
+- `GET /me/notifications`, `GET /me/notifications/unread-count`,
+  `PUT /notifications/{id}/read`, `PUT /me/notifications/read-all`
 
 ## Testing expectations
 
