@@ -13,6 +13,7 @@ from app.routers import (
     notifications,
     partnerships,
     shared_goals,
+    stats,
     users,
 )
 
@@ -48,6 +49,8 @@ app.include_router(shared_goals.router)
 app.include_router(badges.router)
 app.include_router(notifications.me_notifications)
 app.include_router(notifications.notifications)
+app.include_router(stats.habit_stats)
+app.include_router(stats.dashboard)
 app.include_router(users.router)
 
 
