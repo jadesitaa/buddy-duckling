@@ -62,6 +62,17 @@ uvicorn app.main:app --reload
 
 Then open <http://127.0.0.1:8000/docs> for the interactive API docs.
 
+### Or run the whole thing in Docker
+
+```bash
+docker compose up -d --build
+```
+
+Starts PostgreSQL and the API together on <http://127.0.0.1:8000>. The container
+applies the migrations itself on startup, so there is no separate setup step.
+Day-to-day development is still nicer with `uvicorn --reload` on the host, with
+only the database in a container.
+
 > The database is published on host port **5433**, not the usual 5432, to stay
 > out of the way of any PostgreSQL already running on the machine.
 

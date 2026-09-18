@@ -17,5 +17,21 @@ services:
       timeout: 5s
       retries: 5
 
+  # The API itself. Only needed to run the whole stack in containers -
+  # day-to-day development still runs uvicorn on the host against `db`.
+  api:
+    build: .
+    container_name: buddy-duckling-api
+    environment:
+      # Inside the compose network the database is reachable as "db:5432".
+      DATABASE_URL: postgresql+asyncpg://buddy:buddy@db:5432/buddy_duckling
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-change-me-in-env}
+      SCHEDULER_ENABLED: "true"
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
 volumes:
   postgres_data:
