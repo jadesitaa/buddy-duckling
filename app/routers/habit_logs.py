@@ -6,6 +6,7 @@ from app.deps import CurrentUser, DbSession
 from app.models.habit_log import HabitLog
 from app.routers.habits import get_own_habit
 from app.schemas.habit_log import HabitLogCreate, HabitLogCreated, HabitLogRead
+from app.services.badges import award_badges_for_streak
 from app.services.goals import evaluate_goals_for_habit
 from app.services.habit_logs import build_log, recalculate_streaks
 
@@ -31,6 +32,7 @@ async def create_log(
         ) from None
 
     await recalculate_streaks(db, habit, current_user)
+    await award_badges_for_streak(db, habit, current_user.id)
     await evaluate_goals_for_habit(db, habit)
     await db.commit()
     await db.refresh(log)

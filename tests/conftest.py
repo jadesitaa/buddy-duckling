@@ -3,14 +3,24 @@ from collections.abc import AsyncGenerator
 import asyncpg
 import pytest
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy import text
+from sqlalchemy import insert, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.config import get_settings
 from app.db import Base, get_db
+from app.models.badge import Badge
 from app.main import app
 
 settings = get_settings()
+
+# Mirrors the badge rows seeded by migration 862ce56f3f67.
+BADGES = [
+    {"code": "streak_3", "title": "Getting started", "milestone_days": 3},
+    {"code": "streak_7", "title": "One week strong", "milestone_days": 7},
+    {"code": "streak_14", "title": "Two weeks in", "milestone_days": 14},
+    {"code": "streak_30", "title": "One month hero", "milestone_days": 30},
+    {"code": "streak_100", "title": "Hundred days", "milestone_days": 100},
+]
 
 
 async def _create_test_database() -> None:
@@ -50,6 +60,9 @@ async def db(engine) -> AsyncGenerator[AsyncSession, None]:
     tables = ", ".join(table.name for table in Base.metadata.sorted_tables)
     async with engine.begin() as conn:
         await conn.execute(text(f"TRUNCATE {tables} RESTART IDENTITY CASCADE"))
+        # The badge rows are seeded by a migration, and TRUNCATE just removed
+        # them, so put the same list back for every test.
+        await conn.execute(insert(Badge), BADGES)
 
     session_factory = async_sessionmaker(engine, expire_on_commit=False)
     async with session_factory() as session:
