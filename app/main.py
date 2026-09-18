@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 
 from app.config import get_settings
-from app.routers import auth, habits, users
+from app.routers import auth, habit_logs, habits, users
 
 settings = get_settings()
 
@@ -9,6 +9,7 @@ app = FastAPI(title=settings.app_name, debug=settings.debug)
 
 app.include_router(auth.router)
 app.include_router(habits.router)
+app.include_router(habit_logs.router)
 app.include_router(users.router)
 
 

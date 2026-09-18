@@ -40,3 +40,6 @@ class Habit(Base):
     )
 
     owner: Mapped["User"] = relationship(back_populates="habits")  # noqa: F821
+    logs: Mapped[list["HabitLog"]] = relationship(  # noqa: F821
+        back_populates="habit", cascade="all, delete-orphan"
+    )
