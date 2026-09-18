@@ -1,5 +1,7 @@
 # 🐥 Buddy Duckling
 
+[![tests](https://github.com/jadesitaa/buddy-duckling/actions/workflows/tests.yml/badge.svg)](https://github.com/jadesitaa/buddy-duckling/actions/workflows/tests.yml)
+
 A habit tracker API with social accountability. You track your own habits, and
 you pair up with a buddy: whichever side breaks their streak, the other side
 hears about it. Buddies can also set a shared goal — each side has its own

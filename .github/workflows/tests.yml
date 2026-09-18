@@ -1,0 +1,50 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+
+    # The same PostgreSQL the project runs locally, started by the runner.
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: buddy
+          POSTGRES_PASSWORD: buddy
+          POSTGRES_DB: buddy_duckling
+        ports:
+          - 5432:5432
+        # Do not start the tests until the database answers.
+        options: >-
+          --health-cmd "pg_isready -U buddy -d buddy_duckling"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql+asyncpg://buddy:buddy@127.0.0.1:5432/buddy_duckling
+      TEST_DATABASE_URL: postgresql+asyncpg://buddy:buddy@127.0.0.1:5432/buddy_duckling_test
+      JWT_SECRET_KEY: test-secret-not-used-anywhere-real
+      SCHEDULER_ENABLED: "false"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Check the migrations build the schema
+        run: alembic upgrade head
+
+      - name: Run the tests
+        run: pytest -q
