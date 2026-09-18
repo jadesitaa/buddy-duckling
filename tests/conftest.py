@@ -3,6 +3,7 @@ from collections.abc import AsyncGenerator
 import asyncpg
 import pytest
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.config import get_settings
@@ -33,7 +34,11 @@ async def _create_test_database() -> None:
 async def engine():
     await _create_test_database()
     engine = create_async_engine(settings.test_database_url)
+    # The schema is built once for the whole session. Dropping and recreating it
+    # per test would hand asyncpg new ids for the enum types while it still has
+    # the old ones cached, which fails with "cache lookup failed for type ...".
     async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
     yield engine
     await engine.dispose()
@@ -41,10 +46,10 @@ async def engine():
 
 @pytest.fixture
 async def db(engine) -> AsyncGenerator[AsyncSession, None]:
-    """A clean database for every test."""
+    """A clean database for every test - the rows go, the schema stays."""
+    tables = ", ".join(table.name for table in Base.metadata.sorted_tables)
     async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
-        await conn.run_sync(Base.metadata.create_all)
+        await conn.execute(text(f"TRUNCATE {tables} RESTART IDENTITY CASCADE"))
 
     session_factory = async_sessionmaker(engine, expire_on_commit=False)
     async with session_factory() as session:
