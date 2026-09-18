@@ -8,7 +8,7 @@ from app.schemas.habit import HabitCreate, HabitRead, HabitUpdate
 router = APIRouter(prefix="/habits", tags=["habits"])
 
 
-async def _get_own_habit(habit_id: int, current_user: CurrentUser, db: DbSession) -> Habit:
+async def get_own_habit(habit_id: int, current_user: CurrentUser, db: DbSession) -> Habit:
     """Load a habit, or 404 if it does not exist or belongs to someone else.
 
     Answering 404 rather than 403 keeps other people's habit ids unguessable.
@@ -45,14 +45,14 @@ async def list_habits(
 
 @router.get("/{habit_id}", response_model=HabitRead)
 async def get_habit(habit_id: int, current_user: CurrentUser, db: DbSession) -> Habit:
-    return await _get_own_habit(habit_id, current_user, db)
+    return await get_own_habit(habit_id, current_user, db)
 
 
 @router.put("/{habit_id}", response_model=HabitRead)
 async def update_habit(
     habit_id: int, payload: HabitUpdate, current_user: CurrentUser, db: DbSession
 ) -> Habit:
-    habit = await _get_own_habit(habit_id, current_user, db)
+    habit = await get_own_habit(habit_id, current_user, db)
     # exclude_unset so an omitted field keeps its current value.
     for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(habit, field, value)
@@ -63,6 +63,6 @@ async def update_habit(
 
 @router.delete("/{habit_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_habit(habit_id: int, current_user: CurrentUser, db: DbSession) -> None:
-    habit = await _get_own_habit(habit_id, current_user, db)
+    habit = await get_own_habit(habit_id, current_user, db)
     await db.delete(habit)
     await db.commit()
