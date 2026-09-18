@@ -19,6 +19,9 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 30
     refresh_token_expire_days: int = 7
 
+    # The hourly streak check. Tests switch it off and call the job directly.
+    scheduler_enabled: bool = True
+
 
 @lru_cache
 def get_settings() -> Settings:

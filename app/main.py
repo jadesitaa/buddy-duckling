@@ -1,6 +1,10 @@
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 
 from app.config import get_settings
+from app.scheduler import create_scheduler
 from app.routers import (
     auth,
     badges,
@@ -14,7 +18,25 @@ from app.routers import (
 
 settings = get_settings()
 
-app = FastAPI(title=settings.app_name, debug=settings.debug)
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    """Start the background jobs with the app, stop them with it.
+
+    Tests turn the scheduler off (SCHEDULER_ENABLED=false) so they can call the
+    job directly instead of waiting for a trigger to fire.
+    """
+    scheduler = create_scheduler() if settings.scheduler_enabled else None
+    if scheduler:
+        scheduler.start()
+    try:
+        yield
+    finally:
+        if scheduler:
+            scheduler.shutdown(wait=False)
+
+
+app = FastAPI(title=settings.app_name, debug=settings.debug, lifespan=lifespan)
 
 app.include_router(auth.router)
 app.include_router(habits.router)
