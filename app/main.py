@@ -1,7 +1,15 @@
 from fastapi import FastAPI
 
 from app.config import get_settings
-from app.routers import auth, habit_logs, habits, notifications, partnerships, users
+from app.routers import (
+    auth,
+    habit_logs,
+    habits,
+    notifications,
+    partnerships,
+    shared_goals,
+    users,
+)
 
 settings = get_settings()
 
@@ -13,6 +21,7 @@ app.include_router(habit_logs.router)
 app.include_router(partnerships.habit_partners)
 app.include_router(partnerships.partners)
 app.include_router(partnerships.me_partners)
+app.include_router(shared_goals.router)
 app.include_router(notifications.me_notifications)
 app.include_router(notifications.notifications)
 app.include_router(users.router)
