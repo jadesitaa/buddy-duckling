@@ -5,13 +5,21 @@ from app.deps import CurrentUser, DbSession
 from app.models.habit import Habit
 from app.models.partnership import AccountabilityPartner, PartnershipStatus
 from app.models.shared_goal import SharedGoal
-from app.schemas.shared_goal import SharedGoalCreate, SharedGoalProgress, SharedGoalRead
-from app.services.goals import load_sides
+from app.models.user import User
+from app.schemas.shared_goal import (
+    SharedGoalCreate,
+    SharedGoalProgress,
+    SharedGoalRead,
+)
+from app.services.goals import joint_percent, load_sides, milestones_for
 
 router = APIRouter(prefix="/partnerships/{partnership_id}/goals", tags=["shared goals"])
 
 NOT_FOUND = HTTPException(
     status_code=status.HTTP_404_NOT_FOUND, detail="Partnership not found"
+)
+GOAL_NOT_FOUND = HTTPException(
+    status_code=status.HTTP_404_NOT_FOUND, detail="Shared goal not found"
 )
 
 
@@ -37,15 +45,26 @@ async def _get_my_accepted_partnership(
 
 
 async def _with_progress(
-    db: DbSession, partnership: AccountabilityPartner, goal: SharedGoal
+    db: DbSession,
+    partnership: AccountabilityPartner,
+    goal: SharedGoal,
+    current_user: User,
 ) -> SharedGoalProgress:
     sides = await load_sides(db, partnership)
+
     return SharedGoalProgress(
         **SharedGoalRead.model_validate(goal).model_dump(),
         current_streak_a=sides.current_streak_a if sides else 0,
         current_streak_b=sides.current_streak_b if sides else 0,
         reached_a=bool(sides and sides.reached_a(goal)),
         reached_b=bool(sides and sides.reached_b(goal)),
+        joint_days=sides.joint_days() if sides else 0,
+        joint_percent=joint_percent(goal, sides) if sides else 0,
+        days_remaining=(
+            max(0, goal.duration_days - sides.joint_days()) if sides else goal.duration_days
+        ),
+        milestones=milestones_for(goal, sides) if sides else [],
+        my_side=sides.side_of(current_user.id) if sides else "none",
     )
 
 
@@ -67,7 +86,7 @@ async def create_goal(
     db.add(goal)
     await db.commit()
     await db.refresh(goal)
-    return await _with_progress(db, partnership, goal)
+    return await _with_progress(db, partnership, goal, current_user)
 
 
 @router.get("", response_model=list[SharedGoalProgress])
@@ -80,7 +99,9 @@ async def list_goals(
         .where(SharedGoal.partnership_id == partnership.id)
         .order_by(SharedGoal.created_at)
     )
-    return [await _with_progress(db, partnership, goal) for goal in goals]
+    return [
+        await _with_progress(db, partnership, goal, current_user) for goal in goals
+    ]
 
 
 @router.delete("/{goal_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -94,9 +115,7 @@ async def delete_goal(
         )
     )
     if goal is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Shared goal not found"
-        )
+        raise GOAL_NOT_FOUND
 
     await db.delete(goal)
     await db.commit()

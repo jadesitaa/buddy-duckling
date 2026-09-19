@@ -145,7 +145,7 @@ async def test_dashboard_counts_buddy_activity_from_both_sides(
         )
         await auth_client.post(
             f"/partnerships/{partnership_id}/goals",
-            json={"title": "Ice cream", "target_streak_a": 5, "target_streak_b": 5},
+            json={"title": "Ice cream", "duration_days": 5},
         )
 
         buddy_dashboard = (await buddy.get("/me/dashboard")).json()

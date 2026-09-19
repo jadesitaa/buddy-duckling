@@ -14,6 +14,7 @@ BUDDY_EMAIL = "buddy@example.com"
 GOAL = {
     "title": "Ice cream together",
     "reward_description": "The good place downtown",
+    "duration_days": 3,
     "target_streak_a": 3,
     "target_streak_b": 2,
 }
@@ -289,3 +290,135 @@ async def test_invalid_targets_are_rejected(paired):
     )
 
     assert response.status_code == 422
+
+
+# --- Duration-based goals, milestones and personal rewards -------------------
+
+
+async def create_goal(paired, **overrides) -> dict:
+    return (
+        await paired["owner"].post(
+            f"/partnerships/{paired['partnership_id']}/goals",
+            json={**GOAL, **overrides},
+        )
+    ).json()
+
+
+async def read_goal(paired, side: str = "owner") -> dict:
+    return (
+        await paired[side].get(f"/partnerships/{paired['partnership_id']}/goals")
+    ).json()[0]
+
+
+async def test_duration_sets_both_targets_when_none_are_given(paired):
+    goal = await create_goal(
+        paired,
+        target_streak_a=None,
+        target_streak_b=None,
+        duration_days=10,
+    )
+
+    assert goal["duration_days"] == 10
+    assert goal["target_streak_a"] == 10
+    assert goal["target_streak_b"] == 10
+
+
+async def test_joint_progress_moves_at_the_pace_of_whoever_is_behind(paired):
+    await create_goal(paired, duration_days=4, target_streak_a=4, target_streak_b=4)
+
+    await log_days(paired["owner"], paired["habit_a"], 7, 8, 9, 10)  # streak of 4
+    await log_days(paired["buddy"], paired["habit_b"], 9, 10)  # streak of 2
+
+    goal = await read_goal(paired)
+
+    assert goal["current_streak_a"] == 4
+    assert goal["current_streak_b"] == 2
+    assert goal["joint_days"] == 2  # not 4, and not 3 - the pair is at 2
+    assert goal["joint_percent"] == 50
+    assert goal["days_remaining"] == 2
+    assert goal["achieved_at"] is None
+
+
+async def test_milestones_flip_as_the_pair_moves(paired):
+    await create_goal(paired, duration_days=4, target_streak_a=4, target_streak_b=4)
+
+    await log_days(paired["owner"], paired["habit_a"], 9, 10)
+    await log_days(paired["buddy"], paired["habit_b"], 9, 10)
+
+    goal = await read_goal(paired)
+    reached = {item["percent"]: item["reached"] for item in goal["milestones"]}
+
+    # Both on 2 of 4 days: the quarter and half markers are behind them.
+    assert reached == {25: True, 50: True, 75: False, 100: False}
+    assert [item["days"] for item in goal["milestones"]] == [1, 2, 3, 4]
+
+
+async def test_a_finished_duration_goal_is_fully_marked(paired):
+    await create_goal(paired, duration_days=2, target_streak_a=2, target_streak_b=2)
+
+    await log_days(paired["owner"], paired["habit_a"], 9, 10)
+    await log_days(paired["buddy"], paired["habit_b"], 9, 10)
+
+    goal = await read_goal(paired)
+
+    assert goal["achieved_at"] is not None
+    assert goal["joint_percent"] == 100
+    assert goal["days_remaining"] == 0
+    assert all(item["reached"] for item in goal["milestones"])
+
+
+async def test_progress_never_runs_past_one_hundred_percent(paired):
+    await create_goal(paired, duration_days=2, target_streak_a=2, target_streak_b=2)
+
+    await log_days(paired["owner"], paired["habit_a"], 6, 7, 8, 9, 10)
+    await log_days(paired["buddy"], paired["habit_b"], 6, 7, 8, 9, 10)
+
+    goal = await read_goal(paired)
+
+    assert goal["joint_days"] == 5
+    assert goal["joint_percent"] == 100
+    assert goal["days_remaining"] == 0
+
+
+async def test_a_one_day_duration_still_has_sane_milestones(paired):
+    """Rounding must never produce a 0 day milestone that is reached at zero."""
+    await create_goal(paired, duration_days=1, target_streak_a=1, target_streak_b=1)
+
+    goal = await read_goal(paired)
+
+    assert [item["days"] for item in goal["milestones"]] == [1, 1, 1, 1]
+    assert not any(item["reached"] for item in goal["milestones"])
+
+
+async def test_duration_must_be_at_least_one_day(paired):
+    response = await paired["owner"].post(
+        f"/partnerships/{paired['partnership_id']}/goals",
+        json={**GOAL, "duration_days": 0},
+    )
+
+    assert response.status_code == 422
+
+
+async def test_the_waiting_notification_names_the_shared_plan(paired):
+    """Even the first side to finish is reminded it is a plan for two."""
+    await create_goal(paired)
+
+    await log_days(paired["owner"], paired["habit_a"], 8, 9, 10)
+
+    waiting = [
+        item
+        for item in (await paired["owner"].get("/me/notifications")).json()
+        if item["type"] == "waiting_for_partner"
+    ]
+    assert "The good place downtown" in waiting[0]["body"]
+
+
+async def test_a_stranger_cannot_see_a_goal_of_two_other_people(paired, make_user):
+    await create_goal(paired)
+
+    async with await make_user("stranger@example.com") as stranger:
+        response = await stranger.get(
+            f"/partnerships/{paired['partnership_id']}/goals"
+        )
+
+    assert response.status_code == 404

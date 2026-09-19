@@ -13,6 +13,10 @@ class SharedGoal(Base):
     who sent the invite, side B is the partner who accepted. `achieved_at` is
     only set once BOTH sides have independently reached their own target, which
     can happen on different days.
+
+    `duration_days` is the joint commitment - "let's both keep this up for 30
+    days". It is what the shared progress bar and its milestones are measured
+    against, while each side's own target decides when that side is done.
     """
 
     __tablename__ = "shared_goals"
@@ -23,7 +27,10 @@ class SharedGoal(Base):
     )
     target_streak_a: Mapped[int] = mapped_column(Integer)
     target_streak_b: Mapped[int] = mapped_column(Integer)
+    duration_days: Mapped[int] = mapped_column(Integer, server_default="7")
     title: Mapped[str] = mapped_column(String(120))
+    # What the two of them will do together once the goal lands. A reward here
+    # is always something shared - that is the whole point of a buddy goal.
     reward_description: Mapped[str | None] = mapped_column(String(500), default=None)
     achieved_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), default=None
