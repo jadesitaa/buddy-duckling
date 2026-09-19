@@ -25,6 +25,10 @@ project.
 - **Shared goals are asymmetric.** The two sides can be on completely different
   habits with different targets and finish on different days. The first one to
   finish is told they are waiting on their buddy — once.
+- **A shared goal is also a joint commitment.** `duration_days` is what the two
+  of them promised each other, and joint progress moves at the pace of whoever
+  is behind: `min(streak_a, streak_b)`, with quarter-way milestones. Each side
+  can also promise itself a personal reward for its own half.
 
 ## Tech stack
 
@@ -92,7 +96,9 @@ docker compose up -d      # the tests need the database
 pytest
 ```
 
-124 tests covering the streak rules, the ownership rules and every endpoint.
+147 tests covering the streak rules, the ownership rules and every endpoint.
+See [docs/TESTING.md](docs/TESTING.md) for the testing strategy and the edge
+cases each layer is responsible for.
 `freezegun` controls the clock, so tests about "yesterday" and "midnight in
 Bangkok" give the same answer whenever they run. A separate
 `buddy_duckling_test` database is created automatically and truncated between
@@ -103,11 +109,11 @@ tests.
 | Area | Endpoints |
 |---|---|
 | Auth | `POST /auth/register`, `POST /auth/login`, `POST /auth/refresh` |
-| Profile | `GET /users/me`, `PUT /users/me` |
+| Profile | `GET /users/me`, `PUT /users/me`, `GET /avatars` |
 | Habits | `POST /habits`, `GET /habits`, `GET/PUT/DELETE /habits/{id}` |
 | Logs | `POST/GET /habits/{id}/logs`, `DELETE /habits/{id}/logs/{log_id}` |
 | Partners | `POST/GET /habits/{id}/partners`, `GET /me/partner-requests`, `PUT /partners/{id}/accept`, `PUT /partners/{id}/decline`, `DELETE /partners/{id}` |
-| Shared goals | `POST/GET /partnerships/{id}/goals`, `DELETE /partnerships/{id}/goals/{goal_id}` |
+| Shared goals | `POST/GET /partnerships/{id}/goals`, `PUT /partnerships/{id}/goals/{goal_id}/my-reward`, `DELETE /partnerships/{id}/goals/{goal_id}` |
 | Badges | `GET /me/badges` |
 | Notifications | `GET /me/notifications`, `GET /me/notifications/unread-count`, `PUT /notifications/{id}/read`, `PUT /me/notifications/read-all` |
 | Stats | `GET /habits/{id}/stats`, `GET /me/dashboard` |
