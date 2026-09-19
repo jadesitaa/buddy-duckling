@@ -2,6 +2,7 @@ from datetime import date
 
 from pydantic import BaseModel
 
+from app.models.avatar import DuckAvatar
 from app.models.habit import FrequencyType
 
 
@@ -32,6 +33,7 @@ class DashboardHabit(BaseModel):
 
 class Dashboard(BaseModel):
     display_name: str
+    avatar: DuckAvatar
     timezone: str
     # "Today" as the user sees it, which is what every streak is judged against.
     today_local: date

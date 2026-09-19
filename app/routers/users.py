@@ -1,11 +1,23 @@
-from fastapi import APIRouter, HTTPException, status
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
+from fastapi import APIRouter, HTTPException, status
+
 from app.deps import CurrentUser, DbSession
+from app.models.avatar import AVATAR_CATALOG
 from app.models.user import User
-from app.schemas.user import UserRead, UserUpdate
+from app.schemas.user import AvatarOption, UserRead, UserUpdate
 
 router = APIRouter(prefix="/users", tags=["users"])
+avatars = APIRouter(tags=["users"])
+
+
+@avatars.get("/avatars", response_model=list[AvatarOption])
+async def list_avatars() -> list[AvatarOption]:
+    """The pickable ducklings. Open to anyone, so sign-up can show them too."""
+    return [
+        AvatarOption(code=code, title=meta["title"], description=meta["description"])
+        for code, meta in AVATAR_CATALOG.items()
+    ]
 
 
 @router.get("/me", response_model=UserRead)

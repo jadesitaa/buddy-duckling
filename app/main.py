@@ -52,6 +52,7 @@ app.include_router(notifications.notifications)
 app.include_router(stats.habit_stats)
 app.include_router(stats.dashboard)
 app.include_router(users.router)
+app.include_router(users.avatars)
 
 
 @app.get("/health", tags=["health"])

@@ -3,6 +3,7 @@ from datetime import datetime
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 from app.core.security import MAX_PASSWORD_BYTES
+from app.models.avatar import DuckAvatar
 
 
 class UserCreate(BaseModel):
@@ -10,6 +11,7 @@ class UserCreate(BaseModel):
     password: str = Field(min_length=8, max_length=MAX_PASSWORD_BYTES)
     display_name: str = Field(min_length=1, max_length=100)
     timezone: str = Field(default="Asia/Bangkok", max_length=64)
+    avatar: DuckAvatar = DuckAvatar.CLOVER
 
 
 class UserRead(BaseModel):
@@ -18,6 +20,7 @@ class UserRead(BaseModel):
     id: int
     email: EmailStr
     display_name: str
+    avatar: DuckAvatar
     timezone: str
     created_at: datetime
 
@@ -27,6 +30,7 @@ class UserUpdate(BaseModel):
 
     display_name: str | None = Field(default=None, min_length=1, max_length=100)
     timezone: str | None = Field(default=None, max_length=64)
+    avatar: DuckAvatar | None = None
 
 
 class LoginRequest(BaseModel):
@@ -42,3 +46,11 @@ class TokenPair(BaseModel):
     access_token: str
     refresh_token: str
     token_type: str = "bearer"
+
+
+class AvatarOption(BaseModel):
+    """One pickable duckling, straight from the catalog."""
+
+    code: DuckAvatar
+    title: str
+    description: str

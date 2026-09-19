@@ -44,6 +44,7 @@ async def read_dashboard(current_user: CurrentUser, db: DbSession) -> Dashboard:
 
     return Dashboard(
         display_name=current_user.display_name,
+        avatar=current_user.avatar,
         timezone=current_user.timezone,
         today_local=today,
         active_habits=len(habits),

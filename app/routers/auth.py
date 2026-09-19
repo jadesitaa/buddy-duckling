@@ -37,6 +37,7 @@ async def register(payload: UserCreate, db: DbSession) -> User:
         email=payload.email,
         password_hash=hash_password(payload.password),
         display_name=payload.display_name,
+        avatar=payload.avatar,
         timezone=payload.timezone,
     )
     db.add(user)
