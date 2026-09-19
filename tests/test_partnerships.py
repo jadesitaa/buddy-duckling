@@ -198,3 +198,30 @@ async def test_a_stranger_cannot_end_the_partnership(auth_client: AsyncClient, m
         response = await stranger.delete(f"/partners/{partnership_id}")
 
     assert response.status_code == 404
+
+
+async def test_partnership_carries_the_names_a_ui_needs(
+    auth_client: AsyncClient, make_user
+):
+    """The invited side cannot read the inviter's habit, so names come along."""
+    habit_id = await create_habit(auth_client)
+
+    async with await make_user(BUDDY_EMAIL) as buddy:
+        await invite(auth_client, habit_id)
+        buddy_habit_id = await create_habit(buddy, BUDDY_HABIT)
+        request = (await buddy.get("/me/partner-requests")).json()[0]
+
+        assert request["habit_name"] == "Read 10 pages"
+        assert request["owner_display_name"] == "duckling"
+        assert request["partner_display_name"] == "buddy"
+        assert request["partner_email"] == BUDDY_EMAIL
+        assert request["partner_habit_name"] is None
+
+        accepted = (
+            await buddy.put(
+                f"/partners/{request['id']}/accept",
+                json={"partner_habit_id": buddy_habit_id},
+            )
+        ).json()
+
+    assert accepted["partner_habit_name"] == "Go running"

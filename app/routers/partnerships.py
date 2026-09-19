@@ -10,6 +10,7 @@ from app.models.user import User
 from app.routers.habits import get_own_habit
 from app.schemas.partnership import PartnerAccept, PartnerInvite, PartnershipRead
 from app.services.notifier import notify
+from app.services.partnerships import describe, describe_all
 
 habit_partners = APIRouter(prefix="/habits/{habit_id}/partners", tags=["partners"])
 partners = APIRouter(prefix="/partners", tags=["partners"])
@@ -42,7 +43,7 @@ async def _get_pending_invite_for_me(
 )
 async def invite_partner(
     habit_id: int, payload: PartnerInvite, current_user: CurrentUser, db: DbSession
-) -> AccountabilityPartner:
+) -> PartnershipRead:
     habit = await get_own_habit(habit_id, current_user, db)
 
     partner = await db.scalar(select(User).where(User.email == payload.partner_email))
@@ -78,26 +79,26 @@ async def invite_partner(
     )
     await db.commit()
     await db.refresh(partnership)
-    return partnership
+    return await describe(db, partnership)
 
 
 @habit_partners.get("", response_model=list[PartnershipRead])
 async def list_habit_partners(
     habit_id: int, current_user: CurrentUser, db: DbSession
-) -> list[AccountabilityPartner]:
+) -> list[PartnershipRead]:
     habit = await get_own_habit(habit_id, current_user, db)
     result = await db.scalars(
         select(AccountabilityPartner)
         .where(AccountabilityPartner.habit_id == habit.id)
         .order_by(AccountabilityPartner.created_at)
     )
-    return list(result)
+    return await describe_all(db, list(result))
 
 
 @me_partners.get("/partner-requests", response_model=list[PartnershipRead])
 async def list_my_partner_requests(
     current_user: CurrentUser, db: DbSession, pending_only: bool = True
-) -> list[AccountabilityPartner]:
+) -> list[PartnershipRead]:
     """Invitations other people sent to me."""
     query = select(AccountabilityPartner).where(
         AccountabilityPartner.partner_user_id == current_user.id
@@ -105,7 +106,7 @@ async def list_my_partner_requests(
     if pending_only:
         query = query.where(AccountabilityPartner.status == PartnershipStatus.PENDING)
     result = await db.scalars(query.order_by(AccountabilityPartner.created_at))
-    return list(result)
+    return await describe_all(db, list(result))
 
 
 @partners.put("/{partnership_id}/accept", response_model=PartnershipRead)
@@ -114,7 +115,7 @@ async def accept_partnership(
     payload: PartnerAccept,
     current_user: CurrentUser,
     db: DbSession,
-) -> AccountabilityPartner:
+) -> PartnershipRead:
     partnership = await _get_pending_invite_for_me(partnership_id, current_user, db)
 
     if payload.partner_habit_id is not None:
@@ -136,13 +137,13 @@ async def accept_partnership(
     )
     await db.commit()
     await db.refresh(partnership)
-    return partnership
+    return await describe(db, partnership)
 
 
 @partners.put("/{partnership_id}/decline", response_model=PartnershipRead)
 async def decline_partnership(
     partnership_id: int, current_user: CurrentUser, db: DbSession
-) -> AccountabilityPartner:
+) -> PartnershipRead:
     partnership = await _get_pending_invite_for_me(partnership_id, current_user, db)
     partnership.status = PartnershipStatus.DECLINED
 
@@ -158,7 +159,7 @@ async def decline_partnership(
     )
     await db.commit()
     await db.refresh(partnership)
-    return partnership
+    return await describe(db, partnership)
 
 
 @partners.delete("/{partnership_id}", status_code=status.HTTP_204_NO_CONTENT)
