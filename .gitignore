@@ -5,3 +5,7 @@ venv/
 .env
 .pytest_cache/
 .coverage
+
+# frontend
+node_modules/
+dist/
