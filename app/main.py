@@ -12,6 +12,7 @@ from app.routers import (
     habits,
     notifications,
     partnerships,
+    personal_goals,
     shared_goals,
     stats,
     users,
@@ -45,6 +46,8 @@ app.include_router(habit_logs.router)
 app.include_router(partnerships.habit_partners)
 app.include_router(partnerships.partners)
 app.include_router(partnerships.me_partners)
+app.include_router(personal_goals.habit_goals)
+app.include_router(personal_goals.my_goals)
 app.include_router(shared_goals.router)
 app.include_router(badges.router)
 app.include_router(notifications.me_notifications)

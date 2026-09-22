@@ -9,7 +9,12 @@ from app.models.partnership import AccountabilityPartner, PartnershipStatus
 from app.models.shared_goal import SharedGoal
 from app.routers.habits import get_own_habit
 from app.schemas.stats import Dashboard, HabitStats
-from app.services.stats import build_dashboard_habits, build_habit_stats, count_rows
+from app.services.stats import (
+    build_dashboard_habits,
+    build_goal_lines,
+    build_habit_stats,
+    count_rows,
+)
 
 habit_stats = APIRouter(prefix="/habits/{habit_id}", tags=["stats"])
 dashboard = APIRouter(prefix="/me", tags=["stats"])
@@ -50,6 +55,7 @@ async def read_dashboard(current_user: CurrentUser, db: DbSession) -> Dashboard:
         active_habits=len(habits),
         logged_today=sum(1 for habit in habits if habit.logged_today),
         habits=habits,
+        goals=await build_goal_lines(db, current_user),
         badges_earned=await count_rows(
             db, UserBadge, UserBadge.user_id == current_user.id
         ),

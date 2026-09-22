@@ -9,6 +9,7 @@ from app.schemas.habit_log import HabitLogCreate, HabitLogCreated, HabitLogRead
 from app.services.badges import award_badges_for_streak
 from app.services.goals import evaluate_goals_for_habit
 from app.services.habit_logs import build_log, recalculate_streaks
+from app.services.personal_goals import evaluate_personal_goals
 
 router = APIRouter(prefix="/habits/{habit_id}/logs", tags=["habit logs"])
 
@@ -33,6 +34,7 @@ async def create_log(
 
     await recalculate_streaks(db, habit, current_user)
     await award_badges_for_streak(db, habit, current_user.id)
+    await evaluate_personal_goals(db, habit)
     await evaluate_goals_for_habit(db, habit)
     await db.commit()
     await db.refresh(log)

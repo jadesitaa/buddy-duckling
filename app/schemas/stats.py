@@ -31,6 +31,26 @@ class DashboardHabit(BaseModel):
     logged_today: bool
 
 
+class GoalProgressLine(BaseModel):
+    """One goal, flattened so a home screen can render it without branching.
+
+    `kind` says where it came from: a goal you set yourself, or one you share
+    with a buddy. A shared goal moves at the pace of whoever is behind, so its
+    `current` is the pair's joint progress, not yours alone.
+    """
+
+    kind: str  # "personal" | "shared"
+    title: str
+    habit_name: str
+    current: int
+    target: int | None
+    percent: int | None
+    achieved: bool
+    buddy_name: str | None = None
+    my_streak: int | None = None
+    buddy_streak: int | None = None
+
+
 class Dashboard(BaseModel):
     display_name: str
     avatar: DuckAvatar
@@ -45,3 +65,4 @@ class Dashboard(BaseModel):
     pending_partner_requests: int
     accepted_partnerships: int
     active_shared_goals: int
+    goals: list[GoalProgressLine]
