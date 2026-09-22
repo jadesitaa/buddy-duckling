@@ -4,11 +4,15 @@ import { api } from "../api/client";
 import type { Habit, Partnership } from "../api/types";
 import { DuckAvatar } from "../components/DuckAvatar";
 import { GoalList } from "../components/GoalList";
+import { Icon, type IconName } from "../components/icons";
 
-const STATUS: Record<Partnership["status"], { label: string; tone: string }> = {
-  pending: { label: "⏳ Waiting for their answer", tone: "warn" },
-  accepted: { label: "✅ Buddies", tone: "good" },
-  declined: { label: "🙈 They said no", tone: "off" },
+const STATUS: Record<
+  Partnership["status"],
+  { label: string; tone: string; icon: IconName }
+> = {
+  pending: { label: "Waiting for their answer", tone: "warn", icon: "hourglass" },
+  accepted: { label: "Buddies", tone: "good", icon: "check" },
+  declined: { label: "They said no", tone: "off", icon: "declined" },
 };
 
 const EMPTY_INVITE = { habitId: "" as number | "", email: "" };
@@ -88,7 +92,13 @@ export function BuddiesPage() {
           onClick={() => setInviting((open) => !open)}
           disabled={habits.length === 0}
         >
-          {inviting ? "Cancel" : "🤝 Invite a buddy"}
+          {inviting ? (
+            "Cancel"
+          ) : (
+            <>
+              <Icon name="buddies" /> Invite a buddy
+            </>
+          )}
         </button>
       </div>
 
@@ -240,6 +250,7 @@ export function BuddiesPage() {
                 </div>
                 <div className="row">
                   <span className={`pill ${STATUS[partnership.status].tone}`}>
+                    <Icon name={STATUS[partnership.status].icon} size="1em" />{" "}
                     {STATUS[partnership.status].label}
                   </span>
                   <button

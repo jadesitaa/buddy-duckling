@@ -8,6 +8,7 @@ import type {
   HabitLogCreated,
   HabitStats,
   Partnership,
+  PersonalGoal,
   SharedGoal,
   TokenPair,
   User,
@@ -160,6 +161,21 @@ export const api = {
   markAllNotificationsRead: () => put<{ unread: number }>("/me/notifications/read-all"),
 
   badges: () => request<UserBadge[]>("/me/badges"),
+
+  // Personal goals
+  myGoals: () => request<PersonalGoal[]>("/me/goals"),
+  habitGoals: (habitId: number) =>
+    request<PersonalGoal[]>(`/habits/${habitId}/goals`),
+  createPersonalGoal: (
+    habitId: number,
+    body: {
+      title: string;
+      target_days?: number | null;
+      reward_description?: string | null;
+    },
+  ) => post<PersonalGoal>(`/habits/${habitId}/goals`, body),
+  deletePersonalGoal: (habitId: number, goalId: number) =>
+    request<void>(`/habits/${habitId}/goals/${goalId}`, { method: "DELETE" }),
 
   // Buddies
   habitPartners: (habitId: number) =>

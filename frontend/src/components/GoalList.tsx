@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { api } from "../api/client";
 import type { SharedGoal } from "../api/types";
+import { Icon } from "./icons";
 
 function SideProgress({
   label,
@@ -18,7 +19,7 @@ function SideProgress({
   return (
     <div style={{ flex: 1, minWidth: 140 }}>
       <span className="muted">
-        {done ? "✅ " : ""}
+        {done && <Icon name="check" title="reached" />}{done ? " " : ""}
         {label}
       </span>
       <div className="bar">
@@ -61,7 +62,8 @@ function JointProgress({ goal }: { goal: SharedGoal }) {
             key={milestone.percent}
             className={`pill milestone${milestone.reached ? " reached" : ""}`}
           >
-            {milestone.reached ? "★" : "☆"} {milestone.percent}% · {milestone.days}d
+            <Icon name={milestone.reached ? "star" : "starOutline"} size="0.95em" />{" "}
+            {milestone.percent}% · {milestone.days}d
           </span>
         ))}
       </div>
@@ -147,12 +149,13 @@ export function GoalList({
           <div className="spread">
             <div>
               <strong>
-                {goal.achieved_at ? "🏆 " : "🎯 "}
+                <Icon name={goal.achieved_at ? "trophy" : "target"} />{" "}
                 {goal.title}
               </strong>
               {goal.reward_description && (
                 <p className="muted" style={{ margin: 0 }}>
-                  🎉 When you both finish: {goal.reward_description}
+                  <Icon name="party" size="1em" /> When you both finish:{" "}
+                  {goal.reward_description}
                 </p>
               )}
             </div>
@@ -187,8 +190,8 @@ export function GoalList({
 
           {goal.achieved_at && (
             <p className="notice" style={{ margin: 0 }}>
-              Unlocked! You both kept it up for {goal.duration_days} days — time to
-              go do it together 🎉
+              Unlocked! You both kept it up for {goal.duration_days} days — time
+              to go do it together <Icon name="party" size="1em" />
             </p>
           )}
         </article>

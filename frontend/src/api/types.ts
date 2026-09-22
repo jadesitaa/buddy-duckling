@@ -64,6 +64,34 @@ export interface DashboardHabit {
   logged_today: boolean;
 }
 
+export interface PersonalGoal {
+  id: number;
+  habit_id: number;
+  title: string;
+  target_days: number | null;
+  reward_description: string | null;
+  achieved_at: string | null;
+  created_at: string;
+  habit_name: string;
+  current_streak: number;
+  // Both null for an open-ended goal: nothing to be a percentage of.
+  percent: number | null;
+  days_remaining: number | null;
+}
+
+export interface GoalProgressLine {
+  kind: "personal" | "shared";
+  title: string;
+  habit_name: string;
+  current: number;
+  target: number | null;
+  percent: number | null;
+  achieved: boolean;
+  buddy_name: string | null;
+  my_streak: number | null;
+  buddy_streak: number | null;
+}
+
 export interface Dashboard {
   display_name: string;
   avatar: AvatarCode;
@@ -77,6 +105,7 @@ export interface Dashboard {
   pending_partner_requests: number;
   accepted_partnerships: number;
   active_shared_goals: number;
+  goals: GoalProgressLine[];
 }
 
 export interface HabitStats {

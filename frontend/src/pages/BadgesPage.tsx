@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 
 import { api } from "../api/client";
 import type { Habit, UserBadge } from "../api/types";
+import { Icon } from "../components/icons";
 
 export function BadgesPage() {
   const [badges, setBadges] = useState<UserBadge[] | null>(null);
@@ -45,7 +46,7 @@ export function BadgesPage() {
         >
           {badges.map((earned) => (
             <li key={earned.id} className="card" style={{ textAlign: "center" }}>
-              <div style={{ fontSize: "2.2rem" }}>🏅</div>
+              <Icon name="medal" size={44} title={earned.badge.title} />
               <strong>{earned.badge.title}</strong>
               <p className="muted" style={{ margin: "0.2rem 0 0" }}>
                 {earned.badge.milestone_days} day streak

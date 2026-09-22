@@ -3,7 +3,8 @@ import { useCallback, useEffect, useState } from "react";
 import { api } from "../api/client";
 import type { Dashboard, FrequencyType } from "../api/types";
 import { DuckAvatar } from "../components/DuckAvatar";
-import { FlameIcon } from "../components/FlameIcon";
+import { GoalProgress } from "../components/GoalProgress";
+import { Icon } from "../components/icons";
 import { useAuth } from "../auth/AuthContext";
 
 function StreakLabel({
@@ -18,7 +19,7 @@ function StreakLabel({
   return (
     <>
       {streak} {unit}
-      {streak === 1 ? "" : "s"} <FlameIcon />
+      {streak === 1 ? "" : "s"} <Icon name="flame" />
     </>
   );
 }
@@ -29,6 +30,9 @@ export function DashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [loggingId, setLoggingId] = useState<number | null>(null);
   const [adding, setAdding] = useState(false);
+  // Which habit currently has its "new goal" form open, if any.
+  const [goalFor, setGoalFor] = useState<number | null>(null);
+  const [goalForm, setGoalForm] = useState({ title: "", days: "" });
   const [newHabit, setNewHabit] = useState({
     name: "",
     frequency_type: "daily" as FrequencyType,
@@ -79,6 +83,23 @@ export function DashboardPage() {
     }
   }
 
+  async function createGoal(event: React.FormEvent, habitId: number) {
+    event.preventDefault();
+    setError(null);
+    try {
+      await api.createPersonalGoal(habitId, {
+        title: goalForm.title,
+        // Blank means an open-ended goal: track the streak, never finish.
+        target_days: goalForm.days ? Number(goalForm.days) : null,
+      });
+      setGoalForm({ title: "", days: "" });
+      setGoalFor(null);
+      await load();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Could not add that goal");
+    }
+  }
+
   if (!dashboard) return <p className="muted">{error ?? "Loading…"}</p>;
 
   const allDone =
@@ -98,8 +119,12 @@ export function DashboardPage() {
           </div>
         </div>
         <div className="row">
-          <span className="pill">🏅 {dashboard.badges_earned}</span>
-          <span className="pill blue">🤝 {dashboard.accepted_partnerships}</span>
+          <span className="pill" title="badges earned">
+            <Icon name="medal" size="1em" /> {dashboard.badges_earned}
+          </span>
+          <span className="pill blue" title="buddies">
+            <Icon name="buddies" size="1em" /> {dashboard.accepted_partnerships}
+          </span>
         </div>
       </header>
 
@@ -180,28 +205,92 @@ export function DashboardPage() {
       ) : (
         <ul className="stack" style={{ listStyle: "none", padding: 0, margin: 0 }}>
           {dashboard.habits.map((habit) => (
-            <li key={habit.habit_id} className="card spread">
-              <div>
-                <strong>{habit.name}</strong>
-                <p className="muted" style={{ margin: 0 }}>
-                  <StreakLabel
-                    streak={habit.current_streak}
-                    frequency={habit.frequency_type}
-                  />
-                  {habit.longest_streak > habit.current_streak &&
-                    ` · best ${habit.longest_streak}`}
-                </p>
+            <li key={habit.habit_id} className="card stack">
+              <div className="spread">
+                <div>
+                  <strong>{habit.name}</strong>
+                  <p className="muted" style={{ margin: 0 }}>
+                    <StreakLabel
+                      streak={habit.current_streak}
+                      frequency={habit.frequency_type}
+                    />
+                    {habit.longest_streak > habit.current_streak &&
+                      ` · best ${habit.longest_streak}`}
+                  </p>
+                </div>
+                <div className="row">
+                  <button
+                    className="ghost"
+                    onClick={() =>
+                      setGoalFor(goalFor === habit.habit_id ? null : habit.habit_id)
+                    }
+                  >
+                    {goalFor === habit.habit_id ? "Cancel" : "+ Goal"}
+                  </button>
+                  <button
+                    onClick={() => logHabit(habit.habit_id)}
+                    disabled={habit.logged_today || loggingId === habit.habit_id}
+                    className={habit.logged_today ? "secondary" : ""}
+                  >
+                    {habit.logged_today ? (
+                      <>
+                        <Icon name="check" size="1em" /> Done today
+                      </>
+                    ) : (
+                      "Mark done"
+                    )}
+                  </button>
+                </div>
               </div>
-              <button
-                onClick={() => logHabit(habit.habit_id)}
-                disabled={habit.logged_today || loggingId === habit.habit_id}
-                className={habit.logged_today ? "secondary" : ""}
-              >
-                {habit.logged_today ? "✓ Done today" : "Mark done"}
-              </button>
+
+              {goalFor === habit.habit_id && (
+                <form
+                  className="row"
+                  style={{ flexWrap: "wrap" }}
+                  onSubmit={(event) => createGoal(event, habit.habit_id)}
+                >
+                  <input
+                    placeholder="Goal, e.g. Read every day this month"
+                    value={goalForm.title}
+                    onChange={(event) =>
+                      setGoalForm({ ...goalForm, title: event.target.value })
+                    }
+                    style={{ flex: "1 1 200px" }}
+                    required
+                    autoFocus
+                  />
+                  <input
+                    type="number"
+                    min={1}
+                    max={365}
+                    placeholder="Days (optional)"
+                    value={goalForm.days}
+                    onChange={(event) =>
+                      setGoalForm({ ...goalForm, days: event.target.value })
+                    }
+                    style={{ flex: "0 1 150px" }}
+                  />
+                  <button type="submit">Set goal</button>
+                </form>
+              )}
             </li>
           ))}
         </ul>
+      )}
+
+      {dashboard.goals.length > 0 && (
+        <section className="card stack">
+          <div className="spread">
+            <strong>Your goals</strong>
+            <span className="muted">
+              {dashboard.goals.filter((goal) => goal.achieved).length} of{" "}
+              {dashboard.goals.length} done
+            </span>
+          </div>
+          {dashboard.goals.map((goal, index) => (
+            <GoalProgress key={`${goal.kind}-${index}`} goal={goal} />
+          ))}
+        </section>
       )}
 
       <p className="muted" style={{ textAlign: "center" }}>

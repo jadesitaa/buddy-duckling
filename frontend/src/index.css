@@ -350,3 +350,14 @@ h3 {
   background: var(--line);
   color: var(--ink-soft);
 }
+
+/* One goal, one line, with its own bar */
+.goal-line {
+  padding: 0.5rem 0;
+  border-top: 1.5px solid var(--line);
+}
+
+.goal-line:first-of-type {
+  border-top: none;
+  padding-top: 0;
+}

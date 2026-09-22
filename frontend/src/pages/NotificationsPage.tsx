@@ -2,15 +2,16 @@ import { useCallback, useEffect, useState } from "react";
 
 import { api } from "../api/client";
 import type { AppNotification, NotificationType } from "../api/types";
+import { Icon, type IconName } from "../components/icons";
 
-const icons: Record<NotificationType, string> = {
-  streak_broken: "💔",
-  partner_request: "🤝",
-  partner_accepted: "🎉",
-  partner_declined: "🙈",
-  waiting_for_partner: "⏳",
-  goal_achieved: "🏆",
-  badge_earned: "🏅",
+const icons: Record<NotificationType, IconName> = {
+  streak_broken: "brokenStreak",
+  partner_request: "envelope",
+  partner_accepted: "party",
+  partner_declined: "declined",
+  waiting_for_partner: "hourglass",
+  goal_achieved: "trophy",
+  badge_earned: "medal",
 };
 
 function whenever(iso: string): string {
@@ -77,7 +78,7 @@ export function NotificationsPage() {
               style={{ opacity: item.is_read ? 0.6 : 1 }}
             >
               <div className="row" style={{ alignItems: "flex-start" }}>
-                <span style={{ fontSize: "1.4rem" }}>{icons[item.type]}</span>
+                <Icon name={icons[item.type]} size={26} title={item.type} />
                 <div>
                   <strong>{item.title}</strong>
                   <p style={{ margin: "0.15rem 0" }}>{item.body}</p>
